@@ -24,7 +24,7 @@
 #define GSM_PIN ""
 
 // Your GPRS credentials, if any
-const char apn[] = ""; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
+const char apn[] = "internet"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
 const char gprsUser[] = "";
 const char gprsPass[] = "";
 
@@ -35,7 +35,7 @@ const char simPIN[]   = "";
 const char* broker = "194.31.59.188";                    // Public IP address or domain name
 const char* mqttUsername = "deneme";  // MQTT username
 const char* mqttPassword = "deneme";  // MQTT password
-
+const char* mqtt_id = "deneme";  // MQTT id
 const char* topicOutput = "v1/devices/me/telemetry";
 
 const char* topic = "v1/devices/me/telemetry";
@@ -58,7 +58,7 @@ const char* topic = "v1/devices/me/telemetry";
 #include <PubSubClient.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
-
+#include <ArduinoJson.h>
 TinyGsmClient client(modem);
 PubSubClient mqtt(client);
 
@@ -72,11 +72,6 @@ PubSubClient mqtt(client);
 #define I2C_SCL              22
 
 // BME280 pins
-#define I2C_SDA_2            18
-#define I2C_SCL_2            19
-
-#define OUTPUT_1             2
-#define OUTPUT_2             15
 
 uint32_t lastReconnectAttempt = 0;
 
@@ -87,8 +82,6 @@ uint32_t lastReconnectAttempt = 0;
 #define IP5306_ADDR          0x75
 #define IP5306_REG_SYS_CTL0  0x00
 
-float temperature = 0;
-float humidity = 0;
 long lastMsg = 0;
 
 
@@ -107,7 +100,7 @@ void mqttCallback(char* topic, byte* message, unsigned int len) {
 
 
   }
-}
+
 
 boolean mqttConnect() {
   SerialMon.print("Connecting to ");
@@ -117,7 +110,7 @@ boolean mqttConnect() {
   //boolean status = mqtt.connect("GsmClientN");
 
   // Or, if you want to authenticate MQTT:
-  boolean status = mqtt.connect(topic, mqttUsername, mqttPassword);
+  boolean status = mqtt.connect(mqtt_id, mqttUsername, mqttPassword);
 
   if (status == false) {
     SerialMon.println(" fail");
@@ -139,9 +132,6 @@ void setup() {
   
 
   
-  // Keep power when running from battery
-  bool isOk = setPowerBoostKeepOn(1);
-  SerialMon.println(String("IP5306 KeepOn ") + (isOk ? "OK" : "FAIL"));
 
   // Set modem reset, enable, power pins
   pinMode(MODEM_PWKEY, OUTPUT);
@@ -214,22 +204,27 @@ void loop() {
   if (now - lastMsg > 30000) {
     lastMsg = now;
     
-    // Temperature in Celsius
-    temperature = bme.readTemperature();   
-    // Uncomment the next line to set temperature in Fahrenheit 
-    // (and comment the previous temperature line)
-    //temperature = 1.8 * bme.readTemperature() + 32; // Temperature in Fahrenheit
-    
-    // Convert the value to a char array
-    char tempString[8];
-    dtostrf(temperature, 1, 2, tempString);
-    Serial.print("Temperature: ");
-    Serial.println(tempString);
-    mqtt.publish(topicTemperature, tempString);
+  
 
-    humidity = bme.readHumidity();
+
+    StaticJsonDocument < 256 > JSONbuffer;
+    JsonObject veri = JSONbuffer.createNestedObject();
+
+
+    veri["furkan"] = "oguz";
+
+    char JSONmessageBuffer[200];
+    serializeJsonPretty(JSONbuffer, JSONmessageBuffer);
+    Serial.println("Sending message to MQTT topic..");
+    Serial.println(JSONmessageBuffer);
+    if (mqtt.publish("v1/devices/me/telemetry", JSONmessageBuffer) == true) {
+      Serial.println("Success sending message");
+    } else {
+      Serial.println("Error sending message");
+    }
+
     
 
 
   mqtt.loop();
-}
+}}
