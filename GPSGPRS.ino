@@ -3,42 +3,13 @@
 Autour: Furkan Metin OĞUZ
 Date:2022
 */
-#define TINY_GSM_MODEM_SIM800 
-
-#define SerialMon Serial
-#define SerialAT Serial1
-
-#define TINY_GSM_DEBUG SerialMon
-
-#define GSM_PIN ""
-
-const char apn[] = "internet"; 
-const char gprsUser[] = "";
-const char gprsPass[] = "";
-
-
-const char simPIN[]   = ""; 
-
-
-const char* broker = "194.31.59.188";                    
-const char* mqttUsername = "deneme";  
-const char* mqttPassword = "deneme";  
-const char* mqtt_id = "deneme"; 
-const char* topicOutput = "v1/devices/me/telemetry";
-const char* topic = "v1/devices/me/telemetry";
-#include <TinyGPS++.h>
-#include <SoftwareSerial.h>
-#define rxGPS 3
-#define txGPS 2
- 
-long lat, lon;
-SoftwareSerial gpsSerial(rxGPS, txGPS);
-TinyGPSPlus gps;
-
 
 #include <Wire.h>
 #include <TinyGsmClient.h>
-
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
 #ifdef DUMP_AT_COMMANDS
   #include <StreamDebugger.h>
   StreamDebugger debugger(SerialAT, SerialMon);
@@ -46,14 +17,15 @@ TinyGPSPlus gps;
 #else
   TinyGsm modem(SerialAT);
 #endif
-
-#include <PubSubClient.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
-#include <ArduinoJson.h>
-TinyGsmClient client(modem);
-PubSubClient mqtt(client);
-
+//gps pin
+#define rxGPS 23
+#define txGPS 22
+#define TINY_GSM_MODEM_SIM800 
+#define SerialMon Serial
+#define SerialAT Serial1
+#define TINY_GSM_DEBUG SerialMon
+//gprs pin
+#define GSM_PIN ""
 #define MODEM_RST            5
 #define MODEM_PWKEY          4
 #define MODEM_POWER_ON       23
@@ -61,17 +33,29 @@ PubSubClient mqtt(client);
 #define MODEM_RX             26
 #define I2C_SDA              21
 #define I2C_SCL              22
-
-
-uint32_t lastReconnectAttempt = 0;
-
-
-
-
-
 #define IP5306_ADDR          0x75
 #define IP5306_REG_SYS_CTL0  0x00
 
+//sim kurulum
+const char apn[] = "internet"; 
+const char gprsUser[] = "";
+const char gprsPass[] = "";
+const char simPIN[]   = ""; 
+
+//mqtt kurulum
+const char* broker = "194.31.59.188";                    
+const char* mqttUsername = "deneme";  
+const char* mqttPassword = "deneme";  
+const char* mqtt_id = "deneme"; 
+const char* topicOutput = "v1/devices/me/telemetry";
+const char* topic = "v1/devices/me/telemetry";
+//kordinatlar
+long lat, lon;
+SoftwareSerial gpsSerial(rxGPS, txGPS);
+TinyGPSPlus gps;
+TinyGsmClient client(modem);
+PubSubClient mqtt(client);
+uint32_t lastReconnectAttempt = 0;
 long lastMsg = 0;
 
 
@@ -79,13 +63,7 @@ void mqttCallback(char* topic, byte* message, unsigned int len) {
   Serial.print("Message arrived on topic: ");
   Serial.print(topic);
   Serial.print(". Message: ");
-  
-
   Serial.println();
-
- 
-
-
   }
 
 
@@ -164,8 +142,9 @@ void setup() {
 }
 
 void loop() {
+    //mqtt bağlanma ve yeniden bağlanma
   if (!mqtt.connected()) {
-    SerialMon.println("=== MQTT NOT CONNECTED ===");
+    SerialMon.println("MQTT NOT CONNECT ");
     uint32_t t = millis();
     if (t - lastReconnectAttempt > 10000L) {
       lastReconnectAttempt = t;
@@ -182,9 +161,9 @@ void loop() {
     lastMsg = now;
     
   
-while (gpsSerial.available())     // check for gps data
+while (gpsSerial.available())     
   {
-    if (gps.encode(gpsSerial.read()))   // encode gps data
+    if (gps.encode(gpsSerial.read()))  
     {
 
     StaticJsonDocument < 256 > JSONbuffer;
