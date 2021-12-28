@@ -15,9 +15,6 @@ Date:2022
 
 #include <ArduinoJson.h>
 
-#ifdef DUMP_AT_COMMANDS
-#include <StreamDebugger.h>
-
 
 //gprs pin
 #define GSM_PIN ""
