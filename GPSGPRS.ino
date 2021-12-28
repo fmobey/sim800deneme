@@ -15,20 +15,10 @@ Date:2022
 
 #include <ArduinoJson.h>
 
-#ifdef DUMP_AT_COMMANDS#include <StreamDebugger.h>
+#ifdef DUMP_AT_COMMANDS
+#include <StreamDebugger.h>
 
-StreamDebugger debugger(SerialAT, SerialMon);
-TinyGsm modem(debugger);
-#else
-TinyGsm modem(SerialAT);
-#endif
-//gps pin
-#define rxGPS 23
-#define txGPS 22
-#define TINY_GSM_MODEM_SIM800
-#define SerialMon Serial
-#define SerialAT Serial1
-#define TINY_GSM_DEBUG SerialMon
+
 //gprs pin
 #define GSM_PIN ""
 #define MODEM_RST 5
@@ -152,19 +142,11 @@ void loop() {
   if (now - lastMsg > 3000) {
     lastMsg = now;
 
-    while (gpsSerial.available()) {
-      if (gps.encode(gpsSerial.read())) {
 
         StaticJsonDocument < 256 > JSONbuffer;
         JsonObject veri = JSONbuffer.createNestedObject();
 
-        veri["LAT"] = gps.location.lat();
-        veri["LONG"] = gps.location.lng();
-        veri["SPEED"] = gps.speed.kms();
-        veri["ALT"] = gps.altitude.meters();
-        veri["LONG"] = gps.location.lng();
-        veri["DATE"] = gps.date.day() + ":" + gps.date.month() + ":" + gps.date.year();
-        veri["CLOCK"] = gps.time.hour() + ":" + gps.time.minute() + ":" + gps.time.second();
+
 
         char JSONmessageBuffer[200];
         serializeJsonPretty(JSONbuffer, JSONmessageBuffer);
@@ -177,8 +159,8 @@ void loop() {
         }
         mqtt.loop();
 
-      }
-    }
+      
+    
 
   }
 }
