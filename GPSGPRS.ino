@@ -54,10 +54,8 @@ const char* topic = "v1/devices/me/telemetry";
 #else
   TinyGsm modem(SerialAT);
 #endif
-///gps
 #include <TinyGPS++.h> // Library über http://arduiniana.org/libraries/tinygpsplus/ downloaden und installieren
 #include <HardwareSerial.h> // sollte bereits mit Arduino IDE installiert sein
-//gps
 #include "EEPROM.h"
 #include <PubSubClient.h>
 #include <Adafruit_Sensor.h>
@@ -74,15 +72,15 @@ PubSubClient mqtt(client);
 #define MODEM_RX             26
 #define I2C_SDA              21
 #define I2C_SCL              22
-//gps
-#define EEPROM_SIZE 128
 
-//gps
-TinyGPSPlus gps;
-HardwareSerial SerialGPS(1);
+// BME280 pins
 
 uint32_t lastReconnectAttempt = 0;
+
 //gps
+#define EEPROM_SIZE 128
+TinyGPSPlus gps;
+HardwareSerial SerialGPS(1);
 struct GpsDataState_t {
   double originLat = 0;
   double originLon = 0;
@@ -95,11 +93,10 @@ struct GpsDataState_t {
   double prevDist = 0;
 };
 GpsDataState_t gpsState = {};
- #define TASK_SERIAL_RATE 1000 // ms
+#define TASK_SERIAL_RATE 1000 // ms
 uint32_t nextSerialTaskTs = 0;
 uint32_t nextOledTaskTs = 0;
  
-
 
 
 #define IP5306_ADDR          0x75
@@ -153,23 +150,8 @@ void setup() {
   SerialMon.begin(115200);
   delay(10);
   
-
-  
-
-  // Set modem reset, enable, power pins
-  pinMode(MODEM_PWKEY, OUTPUT);
-  pinMode(MODEM_RST, OUTPUT);
-  pinMode(MODEM_POWER_ON, OUTPUT);
-  digitalWrite(MODEM_PWKEY, LOW);
-  digitalWrite(MODEM_RST, HIGH);
-  digitalWrite(MODEM_POWER_ON, HIGH);
-  
-
+//gps
     SerialGPS.begin(9600, SERIAL_8N1, 18, 19);
- 
-  /*
-     EEPROM Speicher initialisieren, wenn noch nicht existent
-  */
   while (!EEPROM.begin(EEPROM_SIZE)) {
     
   }
@@ -187,6 +169,17 @@ void setup() {
  
   EEPROM_readAnything(8, readValue);
   gpsState.originAlt = (double)readValue / 1000000;
+
+  // Set modem reset, enable, power pins
+  pinMode(MODEM_PWKEY, OUTPUT);
+  pinMode(MODEM_RST, OUTPUT);
+  pinMode(MODEM_POWER_ON, OUTPUT);
+  digitalWrite(MODEM_PWKEY, LOW);
+  digitalWrite(MODEM_RST, HIGH);
+  digitalWrite(MODEM_POWER_ON, HIGH);
+  
+
+  
   SerialMon.println("Wait...");
 
   // Set GSM module baud rate and UART pins
@@ -245,12 +238,9 @@ template <class T> int EEPROM_readAnything(int ee, T& value)
     *p++ = EEPROM.read(ee++);
   return i;
 }
-
 void loop() {
-     
-  static int p0 = 0;
+      static int p0 = 0;
  
-  long now = millis();
   // GPS Koordinaten von Modul lesen
   gpsState.originLat = gps.location.lat();
   gpsState.originLon = gps.location.lng();
@@ -270,13 +260,28 @@ void loop() {
   gpsState.altMax = -999999;
   gpsState.spdMax = 0;
   gpsState.altMin = 999999;
-   if (now - lastMsg > 30000) {
+    long now = millis();
+  if (!mqtt.connected()) {
+
+    SerialMon.println("=== MQTT NOT CONNECTED ===");
+    // Reconnect every 10 seconds
+    uint32_t t = millis();
+    if (t - lastReconnectAttempt > 10000L) {
+      lastReconnectAttempt = t;
+      if (mqttConnect()) {
+        lastReconnectAttempt = 0;
+      }
+    }
+    delay(100);
+    return;
+  }
+  if (now - lastMsg > 200) {
     lastMsg = now;
     
     while (SerialGPS.available() > 0) {
     gps.encode(SerialGPS.read());
   }
-      if (gps.satellites.value() > 4) {
+   if (gps.satellites.value() > 4) {
     gpsState.dist = TinyGPSPlus::distanceBetween(gps.location.lat(), gps.location.lng(), gpsState.originLat, gpsState.originLon);
  
     if (gpsState.dist > gpsState.distMax && abs(gpsState.prevDist - gpsState.dist) < 50) {
@@ -298,23 +303,10 @@ void loop() {
   }
 
 
-  mqtt.loop();
-}
-  if (!mqtt.connected()) {
-    SerialMon.println("=== MQTT NOT CONNECTED ===");
-    // Reconnect every 10 seconds
-    uint32_t t = millis();
-    if (t - lastReconnectAttempt > 10000L) {
-      lastReconnectAttempt = t;
-      if (mqttConnect()) {
-        lastReconnectAttempt = 0;
-      }
-    }
-    delay(100);
-    return;
-  }
 
-  if (now - lastMsg > 30000) {
+}
+ 
+  if (now - lastMsg > 2000) {
     lastMsg = now;
     
   
@@ -322,9 +314,7 @@ void loop() {
 
     StaticJsonDocument < 256 > JSONbuffer;
     JsonObject veri = JSONbuffer.createNestedObject();
-  
-    Serial.println(gpsState.dist, 1);
-   
+
 
         veri["LAT"] = gps.location.lat();
         veri["LONG"] = gps.location.lng();
