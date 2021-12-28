@@ -8,6 +8,31 @@
   The above copyright notice and this permission notice shall be included in all
   copies or substantial portions of the Software.
 */
+//gps
+ 
+#include <TinyGPS++.h> // Library über http://arduiniana.org/libraries/tinygpsplus/ downloaden und installieren
+#include <HardwareSerial.h> // sollte bereits mit Arduino IDE installiert sein
+#include "EEPROM.h" 
+#define EEPROM_SIZE 128
+TinyGPSPlus gps;
+struct GpsDataState_t {
+  double originLat = 0;
+  double originLon = 0;
+  double originAlt = 0;
+  double distMax = 0;
+  double dist = 0;
+  double altMax = -999999;
+  double altMin = 999999;
+  double spdMax = 0;
+  double prevDist = 0;
+};
+GpsDataState_t gpsState = {};
+
+#define TASK_SERIAL_RATE 1000 // ms
+uint32_t nextSerialTaskTs = 0;
+uint32_t nextOledTaskTs = 0;
+ 
+
 
 // Select your modem:
 #define TINY_GSM_MODEM_SIM800 // Modem is SIM800L
@@ -183,8 +208,42 @@ void setup() {
   // MQTT Broker setup
   mqtt.setServer(broker, 1883);
   mqtt.setCallback(mqttCallback);
-}
 
+  //gps
+    SerialGPS.begin(9600, SERIAL_8N1, 18, 19);
+
+  while (!EEPROM.begin(EEPROM_SIZE)) {
+    
+  }
+ 
+ 
+  long readValue;
+  EEPROM_readAnything(0, readValue);
+  gpsState.originLat = (double)readValue / 1000000;
+ 
+  EEPROM_readAnything(4, readValue);
+  gpsState.originLon = (double)readValue / 1000000;
+ 
+  EEPROM_readAnything(8, readValue);
+  gpsState.originAlt = (double)readValue / 1000000;
+}
+template <class T> int EEPROM_writeAnything(int ee, const T& value)
+{
+  const byte* p = (const byte*)(const void*)&value;
+  int i;
+  for (i = 0; i < sizeof(value); i++)
+    EEPROM.write(ee++, *p++);
+  return i;
+}
+ 
+template <class T> int EEPROM_readAnything(int ee, T& value)
+{
+  byte* p = (byte*)(void*)&value;
+  int i;
+  for (i = 0; i < sizeof(value); i++)
+    *p++ = EEPROM.read(ee++);
+  return i;
+}
 void loop() {
   if (!mqtt.connected()) {
     SerialMon.println("=== MQTT NOT CONNECTED ===");
@@ -199,7 +258,53 @@ void loop() {
     delay(100);
     return;
   }
+//gps
+  static int p0 = 0;
+ 
+  // GPS Koordinaten von Modul lesen
+  gpsState.originLat = gps.location.lat();
+  gpsState.originLon = gps.location.lng();
+  gpsState.originAlt = gps.altitude.meters();
+ 
+  // Aktuelle Position in nichtflüchtigen ESP32-Speicher schreiben
+  long writeValue;
+  writeValue = gpsState.originLat * 1000000;
+  EEPROM_writeAnything(0, writeValue);
+  writeValue = gpsState.originLon * 1000000;
+  EEPROM_writeAnything(4, writeValue);
+  writeValue = gpsState.originAlt * 1000000;
+  EEPROM_writeAnything(8, writeValue);
+  EEPROM.commit(); // erst mit commit() werden die Daten geschrieben
+ 
+  gpsState.distMax = 0;
+  gpsState.altMax = -999999;
+  gpsState.spdMax = 0;
+  gpsState.altMin = 999999;
 
+  while (SerialGPS.available() > 0) {
+    gps.encode(SerialGPS.read());
+  }
+   if (gps.satellites.value() > 4) {
+    gpsState.dist = TinyGPSPlus::distanceBetween(gps.location.lat(), gps.location.lng(), gpsState.originLat, gpsState.originLon);
+ 
+    if (gpsState.dist > gpsState.distMax && abs(gpsState.prevDist - gpsState.dist) < 50) {
+      gpsState.distMax = gpsState.dist;
+    }
+    gpsState.prevDist = gpsState.dist;
+ 
+    if (gps.altitude.meters() > gpsState.altMax) {
+      gpsState.altMax = gps.altitude.meters();
+    }
+ 
+    if (gps.speed.kmph() > gpsState.spdMax) {
+      gpsState.spdMax = gps.speed.kmph();
+    }
+ 
+    if (gps.altitude.meters() < gpsState.altMin) {
+      gpsState.altMin = gps.altitude.meters();
+    }
+  }
+ 
   long now = millis();
   if (now - lastMsg > 30000) {
     lastMsg = now;
@@ -212,7 +317,11 @@ void loop() {
 
 
     veri["furkan"] = "oguz";
-
+        veri["LAT"] = gps.location.lat();
+        veri["LONG"] = gps.location.lng();
+        veri["SPEED"] = gps.speed.kmph();
+        veri["ALT"] = gps.altitude.meters();
+        veri["LONG"] = gps.location.lng();
     char JSONmessageBuffer[200];
     serializeJsonPretty(JSONbuffer, JSONmessageBuffer);
     Serial.println("Sending message to MQTT topic..");
