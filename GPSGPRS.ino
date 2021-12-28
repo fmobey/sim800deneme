@@ -250,6 +250,7 @@ void loop() {
      
   static int p0 = 0;
  
+  long now = millis();
   // GPS Koordinaten von Modul lesen
   gpsState.originLat = gps.location.lat();
   gpsState.originLon = gps.location.lng();
@@ -313,7 +314,6 @@ void loop() {
     return;
   }
 
-  long now = millis();
   if (now - lastMsg > 30000) {
     lastMsg = now;
     
@@ -328,11 +328,9 @@ void loop() {
 
         veri["LAT"] = gps.location.lat();
         veri["LONG"] = gps.location.lng();
-        veri["SPEED"] = gps.speed.kms();
+        veri["SPEED"] = gps.speed.kmph();
         veri["ALT"] = gps.altitude.meters();
         veri["LONG"] = gps.location.lng();
-        veri["DATE"] = gps.date.day() + ":" + gps.date.month() + ":" + gps.date.year();
-        veri["CLOCK"] = gps.time.hour() + ":" + gps.time.minute() + ":" + gps.time.second();
 
     char JSONmessageBuffer[200];
     serializeJsonPretty(JSONbuffer, JSONmessageBuffer);
