@@ -54,9 +54,7 @@ const char* topic = "v1/devices/me/telemetry";
 #else
   TinyGsm modem(SerialAT);
 #endif
-#include <TinyGPS++.h> // Library über http://arduiniana.org/libraries/tinygpsplus/ downloaden und installieren
-#include <HardwareSerial.h> // sollte bereits mit Arduino IDE installiert sein
-#include "EEPROM.h"
+
 #include <PubSubClient.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
@@ -77,26 +75,8 @@ PubSubClient mqtt(client);
 
 uint32_t lastReconnectAttempt = 0;
 
-//gps
-#define EEPROM_SIZE 128
-TinyGPSPlus gps;
-HardwareSerial SerialGPS(1);
-struct GpsDataState_t {
-  double originLat = 0;
-  double originLon = 0;
-  double originAlt = 0;
-  double distMax = 0;
-  double dist = 0;
-  double altMax = -999999;
-  double altMin = 999999;
-  double spdMax = 0;
-  double prevDist = 0;
-};
-GpsDataState_t gpsState = {};
-#define TASK_SERIAL_RATE 1000 // ms
-uint32_t nextSerialTaskTs = 0;
-uint32_t nextOledTaskTs = 0;
- 
+
+
 
 
 #define IP5306_ADDR          0x75
@@ -150,25 +130,8 @@ void setup() {
   SerialMon.begin(115200);
   delay(10);
   
-//gps
-    SerialGPS.begin(9600, SERIAL_8N1, 18, 19);
-  while (!EEPROM.begin(EEPROM_SIZE)) {
-    
-  }
- 
-  /*
-     Die drei Achsrichtungen x, y, z aus dem Speicher
-     lesen und hinterlegen
-  */
-  long readValue;
-  EEPROM_readAnything(0, readValue);
-  gpsState.originLat = (double)readValue / 1000000;
- 
-  EEPROM_readAnything(4, readValue);
-  gpsState.originLon = (double)readValue / 1000000;
- 
-  EEPROM_readAnything(8, readValue);
-  gpsState.originAlt = (double)readValue / 1000000;
+
+  
 
   // Set modem reset, enable, power pins
   pinMode(MODEM_PWKEY, OUTPUT);
@@ -221,52 +184,13 @@ void setup() {
   mqtt.setServer(broker, 1883);
   mqtt.setCallback(mqttCallback);
 }
-template <class T> int EEPROM_writeAnything(int ee, const T& value)
-{
-  const byte* p = (const byte*)(const void*)&value;
-  int i;
-  for (i = 0; i < sizeof(value); i++)
-    EEPROM.write(ee++, *p++);
-  return i;
-}
- 
-template <class T> int EEPROM_readAnything(int ee, T& value)
-{
-  byte* p = (byte*)(void*)&value;
-  int i;
-  for (i = 0; i < sizeof(value); i++)
-    *p++ = EEPROM.read(ee++);
-  return i;
-}
-void loop() {
-      static int p0 = 0;
- 
-  // GPS Koordinaten von Modul lesen
-  gpsState.originLat = gps.location.lat();
-  gpsState.originLon = gps.location.lng();
-  gpsState.originAlt = gps.altitude.meters();
- 
-  // Aktuelle Position in nichtflüchtigen ESP32-Speicher schreiben
-  long writeValue;
-  writeValue = gpsState.originLat * 1000000;
-  EEPROM_writeAnything(0, writeValue);
-  writeValue = gpsState.originLon * 1000000;
-  EEPROM_writeAnything(4, writeValue);
-  writeValue = gpsState.originAlt * 1000000;
-  EEPROM_writeAnything(8, writeValue);
-  EEPROM.commit(); // erst mit commit() werden die Daten geschrieben
-     long t = millis();
-  gpsState.distMax = 0;
-  gpsState.altMax = -999999;
-  gpsState.spdMax = 0;
-  gpsState.altMin = 999999;
-    long now = millis();
-  if (!mqtt.connected()) {
 
+void loop() {
+  if (!mqtt.connected()) {
     SerialMon.println("=== MQTT NOT CONNECTED ===");
     // Reconnect every 10 seconds
-
-    if (t - lastReconnectAttempt > 1000) {
+    uint32_t t = millis();
+    if (t - lastReconnectAttempt > 10000L) {
       lastReconnectAttempt = t;
       if (mqttConnect()) {
         lastReconnectAttempt = 0;
@@ -275,39 +199,9 @@ void loop() {
     delay(100);
     return;
   }
-  if (now - lastMsg > 200) {
-    lastMsg = now;
-    
-    while (SerialGPS.available() > 0) {
-    gps.encode(SerialGPS.read());
-  }
-  }
-   if (gps.satellites.value() > 4) {
-    gpsState.dist = TinyGPSPlus::distanceBetween(gps.location.lat(), gps.location.lng(), gpsState.originLat, gpsState.originLon);
- 
-    if (gpsState.dist > gpsState.distMax && abs(gpsState.prevDist - gpsState.dist) < 50) {
-      gpsState.distMax = gpsState.dist;
-    }
-    gpsState.prevDist = gpsState.dist;
- 
-    if (gps.altitude.meters() > gpsState.altMax) {
-      gpsState.altMax = gps.altitude.meters();
-    }
- 
-    if (gps.speed.kmph() > gpsState.spdMax) {
-      gpsState.spdMax = gps.speed.kmph();
-    }
- 
-    if (gps.altitude.meters() < gpsState.altMin) {
-      gpsState.altMin = gps.altitude.meters();
-    }
-  }
 
-
-
-
- 
-  if (now - lastMsg > 2000) {
+  long now = millis();
+  if (now - lastMsg > 30000) {
     lastMsg = now;
     
   
@@ -317,11 +211,7 @@ void loop() {
     JsonObject veri = JSONbuffer.createNestedObject();
 
 
-        veri["LAT"] = gps.location.lat();
-        veri["LONG"] = gps.location.lng();
-        veri["SPEED"] = gps.speed.kmph();
-        veri["ALT"] = gps.altitude.meters();
-        veri["LONG"] = gps.location.lng();
+    veri["furkan"] = "oguz";
 
     char JSONmessageBuffer[200];
     serializeJsonPretty(JSONbuffer, JSONmessageBuffer);
