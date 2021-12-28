@@ -41,10 +41,7 @@ const char * mqttPassword = "deneme";
 const char * mqtt_id = "deneme";
 const char * topicOutput = "v1/devices/me/telemetry";
 const char * topic = "v1/devices/me/telemetry";
-//kordinatlar
-long lat, lon;
-SoftwareSerial gpsSerial(rxGPS, txGPS);
-TinyGPSPlus gps;
+
 TinyGsmClient client(modem);
 PubSubClient mqtt(client);
 uint32_t lastReconnectAttempt = 0;
