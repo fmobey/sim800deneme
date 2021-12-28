@@ -255,7 +255,7 @@ void loop() {
   writeValue = gpsState.originAlt * 1000000;
   EEPROM_writeAnything(8, writeValue);
   EEPROM.commit(); // erst mit commit() werden die Daten geschrieben
- 
+     long t = millis();
   gpsState.distMax = 0;
   gpsState.altMax = -999999;
   gpsState.spdMax = 0;
@@ -265,8 +265,8 @@ void loop() {
 
     SerialMon.println("=== MQTT NOT CONNECTED ===");
     // Reconnect every 10 seconds
-    uint32_t t = millis();
-    if (t - lastReconnectAttempt > 10000L) {
+
+    if (t - lastReconnectAttempt > 1000) {
       lastReconnectAttempt = t;
       if (mqttConnect()) {
         lastReconnectAttempt = 0;
@@ -280,6 +280,7 @@ void loop() {
     
     while (SerialGPS.available() > 0) {
     gps.encode(SerialGPS.read());
+  }
   }
    if (gps.satellites.value() > 4) {
     gpsState.dist = TinyGPSPlus::distanceBetween(gps.location.lat(), gps.location.lng(), gpsState.originLat, gpsState.originLon);
@@ -304,7 +305,7 @@ void loop() {
 
 
 
-}
+
  
   if (now - lastMsg > 2000) {
     lastMsg = now;
