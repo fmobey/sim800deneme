@@ -152,7 +152,7 @@ boolean mqttConnect() {
 
 void setup() {
   // Set console baud rate
-  SerialMon.begin(115200);
+  SerialMon.begin(9600);
   delay(10);
   
 
@@ -171,7 +171,7 @@ void setup() {
   SerialMon.println("Wait...");
 
   // Set GSM module baud rate and UART pins
-  SerialAT.begin(115200, SERIAL_8N1, MODEM_RX, MODEM_TX);
+  SerialAT.begin(9600, SERIAL_8N1, MODEM_RX, MODEM_TX);
   delay(6000);
 
   // Restart takes quite some time
