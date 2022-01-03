@@ -13,7 +13,7 @@
 #include <TinyGPS++.h> // Library über http://arduiniana.org/libraries/tinygpsplus/ downloaden und installieren
 #include <HardwareSerial.h> // sollte bereits mit Arduino IDE installiert sein
 #include "EEPROM.h" 
-#define EEPROM_SIZE 128
+#define EEPROM_SIZE 1024
 TinyGPSPlus gps;
 struct GpsDataState_t {
   double originLat = 0;
@@ -249,7 +249,7 @@ void loop() {
     SerialMon.println("=== MQTT NOT CONNECTED ===");
     // Reconnect every 10 seconds
     uint32_t t = millis();
-    if (t - lastReconnectAttempt > 10000L) {
+    if (t - lastReconnectAttempt > 1000L) {
       lastReconnectAttempt = t;
       if (mqttConnect()) {
         lastReconnectAttempt = 0;
@@ -258,9 +258,7 @@ void loop() {
     delay(100);
     return;
   }
-//gps
-  static int p0 = 0;
- 
+
   // GPS Koordinaten von Modul lesen
   gpsState.originLat = gps.location.lat();
   gpsState.originLon = gps.location.lng();
@@ -306,7 +304,7 @@ void loop() {
   }
  
   long now = millis();
-  if (now - lastMsg > 30000) {
+  if (now - lastMsg > 3000) {
     lastMsg = now;
     
   
@@ -316,7 +314,6 @@ void loop() {
     JsonObject veri = JSONbuffer.createNestedObject();
 
 
-    veri["furkan"] = "oguz";
         veri["LAT"] = gps.location.lat();
         veri["LONG"] = gps.location.lng();
         veri["SPEED"] = gps.speed.kmph();
