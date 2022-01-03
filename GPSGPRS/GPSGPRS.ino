@@ -113,25 +113,32 @@ uint32_t lastReconnectAttempt = 0;
 long lastMsg = 0;
 
 
-void mqttCallback(char* topic, byte* message, unsigned int len) {
+void mqttCallback(char* topic, byte* message, unsigned int length) {
   Serial.print("Message arrived on topic: ");
   Serial.print(topic);
   Serial.print(". Message: ");
+  String messageTemp;
   
-
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)message[i]);
+    messageTemp += (char)message[i];
+  }
   Serial.println();
-for (int i = 0; i < length; i++)
-{
-Serial.print((char)message[i]);
-}
-Serial.println();
-Serial.println("-----------------------");
+
   // Feel free to add more if statements to control more GPIOs with MQTT
 
-  // If a message is received on the topic esp/output1, you check if the message is either "true" or "false". 
+  // If a message is received on the topic esp32/output, you check if the message is either "on" or "off". 
   // Changes the output state according to the message
-
-
+  if (String(topic) == "v1/devices/me/telemetryT") {
+    Serial.print("Changing output to ");
+    if(messageTemp == "on"){
+      Serial.println("on");
+      
+    }
+    else if(messageTemp == "off"){
+      Serial.println("off");
+    }
+  }
   }
 
 
@@ -337,7 +344,7 @@ void loop() {
     Serial.println("Sending message to MQTT topic..");
     Serial.println(JSONmessageBuffer);
     if(  mqtt.subscribe(topicOutput)==true ){
-      
+
     }
     if (mqtt.publish("v1/devices/me/telemetry", JSONmessageBuffer) == true) {
       Serial.println("Success sending message");
