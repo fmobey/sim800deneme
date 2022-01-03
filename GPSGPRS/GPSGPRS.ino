@@ -14,6 +14,9 @@
 #include <HardwareSerial.h> // sollte bereits mit Arduino IDE installiert sein
 #include "EEPROM.h" 
 #define EEPROM_SIZE 1024
+
+HardwareSerial SerialGPS(2);
+
 TinyGPSPlus gps;
 struct GpsDataState_t {
   double originLat = 0;
@@ -245,8 +248,13 @@ template <class T> int EEPROM_readAnything(int ee, T& value)
   return i;
 }
 void loop() {
+
   if (!mqtt.connected()) {
     SerialMon.println("=== MQTT NOT CONNECTED ===");
+
+
+
+    
     // Reconnect every 10 seconds
     uint32_t t = millis();
     if (t - lastReconnectAttempt > 1000L) {
