@@ -120,7 +120,12 @@ void mqttCallback(char* topic, byte* message, unsigned int len) {
   
 
   Serial.println();
-
+for (int i = 0; i < length; i++)
+{
+Serial.print((char)message[i]);
+}
+Serial.println();
+Serial.println("-----------------------");
   // Feel free to add more if statements to control more GPIOs with MQTT
 
   // If a message is received on the topic esp/output1, you check if the message is either "true" or "false". 
@@ -331,6 +336,9 @@ void loop() {
     serializeJsonPretty(JSONbuffer, JSONmessageBuffer);
     Serial.println("Sending message to MQTT topic..");
     Serial.println(JSONmessageBuffer);
+    if(  mqtt.subscribe(topicOutput)==true ){
+      
+    }
     if (mqtt.publish("v1/devices/me/telemetry", JSONmessageBuffer) == true) {
       Serial.println("Success sending message");
     } else {
