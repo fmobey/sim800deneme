@@ -68,28 +68,14 @@ struct GpsDataState_t {
   double prevDist = 0;
 };
 GpsDataState_t gpsState = {};
-
-<<<<<<< Updated upstream
-=======
-#define TASK_SERIAL_RATE 1000 // ms
-uint32_t nextSerialTaskTs = 0;
-uint32_t nextOledTaskTs = 0;
- 
-
-
-// Select your modem:
-#define TINY_GSM_MODEM_SIM800 // Modem is SIM800L
-
-// Set serial for debug console (to the Serial Monitor, default speed 115200)
-#define SerialMon Serial
-// Set serial for AT commands
-#define SerialAT Serial1
-//Dinleme
-
-// Define the serial console for debug prints, if needed
-#define TINY_GSM_DEBUG SerialMon
->>>>>>> Stashed changes
-
+//batarya
+const int giris=100;
+float total =0;
+float average=0;
+float okunandeger[giris];
+float deger =0;
+float volt =0;
+float yuzde =-1;
 
 // Varsa GPRS kimlik bilgileriniz
 const char apn[] = "internet"; 
@@ -132,7 +118,6 @@ void mqttCallback(char* topic, byte* message, unsigned int len) {
 
   Serial.println();
 
-<<<<<<< Updated upstream
 // mqtt üzerinden kilit açıp kapatma
   if (String(topic) == "v1/devices/me/telemetry") {
     Serial.print("Changing output to ");
@@ -144,14 +129,6 @@ void mqttCallback(char* topic, byte* message, unsigned int len) {
       Serial.println("off");
     }
   }
-=======
-  // Feel free to add more if statements to control more GPIOs with MQTT
-
-  // If a message is received on the topic esp/output1, you check if the message is either "true" or "false". 
-  // Changes the output state according to the message
-
-
->>>>>>> Stashed changes
   }
 
 
@@ -176,13 +153,8 @@ boolean mqttConnect() {
 
 
 void setup() {
-<<<<<<< Updated upstream
   //SerialMon.begin(9600, SERIAL_8N1, 12, 13); kilit sistemi kullanılcağı zaman 
   SerialMon.begin(9600);
-=======
-  // Set console baud rate
-  //SerialMon.begin(9600);
->>>>>>> Stashed changes
   delay(10);
   SerialMon.begin(9600, SERIAL_8N1, 13, 12);//dinleme
 
@@ -339,19 +311,35 @@ void loop() {
   long now = millis();
   if (now - lastMsg > 3000) {
     lastMsg = now;
-    
 
+     for(int i=0; i<100;i++){
+  deger = analogRead(34);
+  
+  volt = ((deger/1202)*345)/15;
+  
+  okunandeger[i]= volt;
+  total= total + okunandeger[i];
+  
+   average= total/giris;
+  }
+  total=0;
+
+  yuzde = map(average, 31.1, 42.1, 0.0, 100.0 );
 
 
     StaticJsonDocument < 256 > JSONbuffer;
-    JsonObject veri = JSONbuffer.createNestedObject();
+    JsonObject GpsData = JSONbuffer.createNestedObject();
+    JsonObject BatteryData = JSONbuffer.createNestedObject();
 
+      BatteryData["BatteryVoltage"]=average;
+      BatteryData["BatteryPercent"]=yuzde;
 
-        veri["LAT"] = gps.location.lat();
-        veri["LONG"] = gps.location.lng();
-        veri["SPEED"] = gps.speed.kmph();
-        veri["ALT"] = gps.altitude.meters();
-        veri["LONG"] = gps.location.lng();
+        GpsData["LAT"] = gps.location.lat();
+        GpsData["LONG"] = gps.location.lng();
+        GpsData["SPEED"] = gps.speed.kmph();
+        GpsData["ALT"] = gps.altitude.meters();
+        GpsData["LONG"] = gps.location.lng();
+        
     char JSONmessageBuffer[200];
     serializeJsonPretty(JSONbuffer, JSONmessageBuffer);
     Serial.println("Sending message to MQTT topic..");
@@ -368,13 +356,5 @@ void loop() {
   mqtt.loop();
 }
 
-  String bahri1;
-  SerialMon.println("Initializing modem...");
-    while (SerialMon.available() > 0) {
-    bahri1=SerialMon.read();
-  }
-  delay(500);
-  Serial.println("------------");
-  Serial.println(bahri1);
-  Serial.println("------------");
+
   }
