@@ -129,7 +129,7 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
 
   // If a message is received on the topic esp32/output, you check if the message is either "on" or "off". 
   // Changes the output state according to the message
-  if (String(topic) == "v1/devices/me/telemetryT") {
+  if (String(topic) == "v1/devices/me/telemetry") {
     Serial.print("Changing output to ");
     if(messageTemp == "on"){
       Serial.println("on");
@@ -332,8 +332,10 @@ void loop() {
 
     StaticJsonDocument < 256 > JSONbuffer;
     JsonObject veri = JSONbuffer.createNestedObject();
-
-
+    JsonObject relay = JSONbuffer.createNestedObject();
+       
+        relay["messageTemp"] = "on";
+      
         veri["LAT"] = gps.location.lat();
         veri["LONG"] = gps.location.lng();
         veri["SPEED"] = gps.speed.kmph();
