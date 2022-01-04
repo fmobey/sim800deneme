@@ -69,6 +69,26 @@ struct GpsDataState_t {
 };
 GpsDataState_t gpsState = {};
 
+<<<<<<< Updated upstream
+=======
+#define TASK_SERIAL_RATE 1000 // ms
+uint32_t nextSerialTaskTs = 0;
+uint32_t nextOledTaskTs = 0;
+ 
+
+
+// Select your modem:
+#define TINY_GSM_MODEM_SIM800 // Modem is SIM800L
+
+// Set serial for debug console (to the Serial Monitor, default speed 115200)
+#define SerialMon Serial
+// Set serial for AT commands
+#define SerialAT Serial1
+//Dinleme
+
+// Define the serial console for debug prints, if needed
+#define TINY_GSM_DEBUG SerialMon
+>>>>>>> Stashed changes
 
 
 // Varsa GPRS kimlik bilgileriniz
@@ -104,18 +124,15 @@ uint32_t lastReconnectAttempt = 0;
 long lastMsg = 0;
 
 
-void mqttCallback(char* topic, byte* message, unsigned int length) {
+void mqttCallback(char* topic, byte* message, unsigned int len) {
   Serial.print("Message arrived on topic: ");
   Serial.print(topic);
   Serial.print(". Message: ");
-  String messageTemp;
   
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)message[i]);
-    messageTemp += (char)message[i];
-  }
+
   Serial.println();
 
+<<<<<<< Updated upstream
 // mqtt üzerinden kilit açıp kapatma
   if (String(topic) == "v1/devices/me/telemetry") {
     Serial.print("Changing output to ");
@@ -127,6 +144,14 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
       Serial.println("off");
     }
   }
+=======
+  // Feel free to add more if statements to control more GPIOs with MQTT
+
+  // If a message is received on the topic esp/output1, you check if the message is either "true" or "false". 
+  // Changes the output state according to the message
+
+
+>>>>>>> Stashed changes
   }
 
 
@@ -151,10 +176,15 @@ boolean mqttConnect() {
 
 
 void setup() {
+<<<<<<< Updated upstream
   //SerialMon.begin(9600, SERIAL_8N1, 12, 13); kilit sistemi kullanılcağı zaman 
   SerialMon.begin(9600);
+=======
+  // Set console baud rate
+  //SerialMon.begin(9600);
+>>>>>>> Stashed changes
   delay(10);
-  
+  SerialMon.begin(9600, SERIAL_8N1, 13, 12);//dinleme
 
   
 
@@ -310,15 +340,13 @@ void loop() {
   if (now - lastMsg > 3000) {
     lastMsg = now;
     
-  
+
 
 
     StaticJsonDocument < 256 > JSONbuffer;
     JsonObject veri = JSONbuffer.createNestedObject();
-    JsonObject relay = JSONbuffer.createNestedObject();
-       
-        relay["messageTemp"] = "on";
-      
+
+
         veri["LAT"] = gps.location.lat();
         veri["LONG"] = gps.location.lng();
         veri["SPEED"] = gps.speed.kmph();
@@ -328,9 +356,6 @@ void loop() {
     serializeJsonPretty(JSONbuffer, JSONmessageBuffer);
     Serial.println("Sending message to MQTT topic..");
     Serial.println(JSONmessageBuffer);
-    if(  mqtt.subscribe(topicOutput)==true ){
-
-    }
     if (mqtt.publish("v1/devices/me/telemetry", JSONmessageBuffer) == true) {
       Serial.println("Success sending message");
     } else {
@@ -341,4 +366,15 @@ void loop() {
 
 
   mqtt.loop();
-}}
+}
+
+  String bahri1;
+  SerialMon.println("Initializing modem...");
+    while (SerialMon.available() > 0) {
+    bahri1=SerialMon.read();
+  }
+  delay(500);
+  Serial.println("------------");
+  Serial.println(bahri1);
+  Serial.println("------------");
+  }
