@@ -189,6 +189,18 @@ void setup() {
     modem.simUnlock(GSM_PIN);
   }
 
+  char imei[16] = {0}; // MUST use a 16 character buffer for IMEI!
+  uint8_t imeiLen = modem.getIMEI(imei);
+  if (imeiLen > 0) {
+    Serial.print("SIM card IMEI: "); Serial.println(imei);
+      Serial.print("SIM card IMEI: "); Serial.println(imei);
+        Serial.print("SIM card IMEI: "); Serial.println(imei);
+          Serial.print("SIM card IMEI: "); Serial.println(imei);
+            Serial.print("SIM card IMEI: "); Serial.println(imei);
+              Serial.print("SIM card IMEI: "); Serial.println(imei);
+                Serial.print("SIM card IMEI: "); Serial.println(imei);
+                
+  }
 
 
   SerialMon.print("Connecting to APN: ");
