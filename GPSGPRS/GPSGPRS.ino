@@ -1,3 +1,15 @@
+/*
+  Rui Santos
+  Complete project details at https://RandomNerdTutorials.com/esp32-cloud-mqtt-broker-sim800l/
+  
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files.
+  
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+*/
+//gps
+ 
 #include <TinyGPS++.h> // Library über http://arduiniana.org/libraries/tinygpsplus/ downloaden und installieren
 #include <HardwareSerial.h> // sollte bereits mit Arduino IDE installiert sein
 #include "EEPROM.h" 
@@ -48,13 +60,14 @@ const char gprsPass[] = "";
 const char simPIN[]   = ""; 
 
 // MQTT details
-const char* broker = "194.31.59.188";                    // Public IP address or domain name
-const char* mqttUsername = "deneme";  // MQTT username
-const char* mqttPassword = "deneme";  // MQTT password
-const char* mqtt_id = "deneme";  // MQTT id
-const char* topicOutput = "v1/devices/me/telemetry";
+const char* broker = "raccoonscooter.com";                    // Public IP address or domain name
+const char* mqttUsername = "raccoon";  // MQTT username
+const char* mqttPassword = "Ze255Wer29tete/-";  // MQTT password
+const char* mqtt_id = "831ac06b-709f-480b-89d4-c6fe333a6b49";  // MQTT id
+const char* imei="867372058971479";
+const char* topicOutput = imei;
 
-const char* topic = "v1/devices/me/telemetry";
+const char* topic = "867372058971479/kilit";
 
 
 // Define the serial console for debug prints, if needed
@@ -91,6 +104,8 @@ PubSubClient mqtt(client);
 
 uint32_t lastReconnectAttempt = 0;
 
+String lock_data="";
+String imeiString="başarısız imei";
 const int giris=100;
 float total =0;
 float average=0;
@@ -99,15 +114,10 @@ float deger =0;
 float volt =0;
 float yuzde =-1;
 
-String imeiString="başarısız imei ";
-
 #define IP5306_ADDR          0x75
 #define IP5306_REG_SYS_CTL0  0x00
 
 long lastMsg = 0;
-
-
-
 
 
 void mqttCallback(char* topic, byte* message, unsigned int length) {
@@ -126,14 +136,19 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
 
   // If a message is received on the topic esp32/output, you check if the message is either "on" or "off". 
   // Changes the output state according to the message
-  if (String(topic) == "v1/devices/me/telemetry") {
+  if (String(topic) == "867372058971479/kilit") {
     Serial.print("Changing output to ");
     if(messageTemp == "on"){
       Serial.println("on");
+      lock_data="açık";
       
+ 
+
     }
     else if(messageTemp == "off"){
       Serial.println("off");
+      lock_data="kapalı";
+  
     }
   }
   }
@@ -155,7 +170,7 @@ boolean mqttConnect() {
     return false;
   }
   SerialMon.println(" success");
-  mqtt.subscribe(topicOutput);
+  mqtt.subscribe(topic);
   
 
   return mqtt.connected();
@@ -169,6 +184,7 @@ void setup() {
   
 
   
+
   // Set modem reset, enable, power pins
   pinMode(MODEM_PWKEY, OUTPUT);
   pinMode(MODEM_RST, OUTPUT);
@@ -183,7 +199,6 @@ void setup() {
 
   // Set GSM module baud rate and UART pins
   SerialAT.begin(9600, SERIAL_8N1, MODEM_RX, MODEM_TX);
-  delay(6000);
 
   // Restart takes quite some time
   // To skip it, call init() instead of restart()
@@ -200,8 +215,8 @@ void setup() {
     modem.simUnlock(GSM_PIN);
   }
 
-
   imeiString=   modem.getIMEI();//burdayım
+
   SerialMon.print("Connecting to APN: ");
   SerialMon.print(apn);
   if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
@@ -265,7 +280,7 @@ void loop() {
     
     // Reconnect every 10 seconds
     uint32_t t = millis();
-    if (t - lastReconnectAttempt > 1000L) {
+    if (t - lastReconnectAttempt > 10000L) {
       lastReconnectAttempt = t;
       if (mqttConnect()) {
         lastReconnectAttempt = 0;
@@ -320,9 +335,10 @@ void loop() {
   }
  
   long now = millis();
-  if (now - lastMsg > 3000) {
+  if (now - lastMsg > 5000) {
     lastMsg = now;
-    
+ 
+  
        for(int i=0; i<100;i++){
   deger = analogRead(34);
   
@@ -338,27 +354,30 @@ void loop() {
   yuzde = map(average, 31.1, 42.1, 0.0, 100.0 );
 
 
-    StaticJsonDocument < 256 > JSONbuffer;
-     JsonObject GpsData = JSONbuffer.createNestedObject();
-    JsonObject BatteryData = JSONbuffer.createNestedObject();
-    JsonObject imeiData = JSONbuffer.createNestedObject();
-    imeiData["imei"]=  imeiString;
-      BatteryData["BatteryVoltage"]=average;
-      BatteryData["BatteryPercent"]=yuzde;
+    StaticJsonDocument < 512 > JSONbuffer;
+     JsonObject veri = JSONbuffer.createNestedObject();
+     JsonObject BatteryData = JSONbuffer.createNestedObject();
 
-        GpsData["LAT"] = gps.location.lat();
-        GpsData["LONG"] = gps.location.lng();
-        GpsData["SPEED"] = gps.speed.kmph();
-        GpsData["ALT"] = gps.altitude.meters();
-        GpsData["LONG"] = gps.location.lng();
+     
+       
+        
+        BatteryData["İMEİ"]=  imeiString;
+        BatteryData["BV"]=average;
+        BatteryData["BP"]=yuzde;
+        BatteryData["LS"]=  lock_data;
+        veri["LAT"] = gps.location.lat();
+        veri["LONG"] = gps.location.lng();
+        veri["SPEED"] = gps.speed.kmph();
+        veri["ALT"] = gps.altitude.meters();
+        veri["LONG"] = gps.location.lng();
     char JSONmessageBuffer[200];
     serializeJsonPretty(JSONbuffer, JSONmessageBuffer);
     Serial.println("Sending message to MQTT topic..");
     Serial.println(JSONmessageBuffer);
-    if(  mqtt.subscribe(topicOutput)==true ){
+    if(  mqtt.subscribe(topic)==true ){
 
     }
-    if (mqtt.publish("v1/devices/me/telemetry", JSONmessageBuffer) == true) {
+    if (mqtt.publish(imei, JSONmessageBuffer) == true) {
       Serial.println("Success sending message");
     } else {
       Serial.println("Error sending message");
