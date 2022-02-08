@@ -139,18 +139,23 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
   if (String(topic) == "867372058971479/lock") {
     Serial.print("Changing output to ");
     if(messageTemp == "on"){
-      Serial.println("on");
+  
       lock_data="açık";
-      for(int i=0; i<6 ; i++){
-        Serial.println("on");
-        Serial.println("on");
-        Serial.println("on");
-        Serial.println("on");
-        digitalWrite(15, HIGH);
-        digitalWrite(15, LOW);
+      unsigned long eskiZaman=0;
+      unsigned long yeniZaman;
+      yeniZaman = millis();  
         
-        }
+      if(yeniZaman-eskiZaman > 1000){
  
+       for(int i=0; i<10; i++){
+        digitalWrite(32, LOW);
+        delay(50);
+        digitalWrite(32, HIGH);
+        delay(50);
+       }  
+     /* Eski zaman değeri yeni zaman değeri ile güncelleniyor */
+     eskiZaman = yeniZaman;
+  }
 
     }
     else if(messageTemp == "off"){
@@ -207,6 +212,9 @@ void setup() {
 
   // Set GSM module baud rate and UART pins
   SerialAT.begin(9600, SERIAL_8N1, MODEM_RX, MODEM_TX);
+  pinMode(32, OUTPUT);    // sets the digital pin 13 as output
+  digitalWrite(32, HIGH);
+        
 
   // Restart takes quite some time
   // To skip it, call init() instead of restart()
@@ -343,7 +351,7 @@ void loop() {
   }
  
   long now = millis();
-  if (now - lastMsg > 2000) {
+  if (now - lastMsg > 1500) {
     lastMsg = now;
  
   
