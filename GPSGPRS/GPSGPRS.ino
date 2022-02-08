@@ -67,7 +67,7 @@ const char* mqtt_id = "831ac06b-709f-480b-89d4-c6fe333a6b49";  // MQTT id
 const char* imei="867372058971479";
 const char* topicOutput = imei;
 
-const char* topic = "867372058971479/kilit";
+const char* topic = "867372058971479/lock";
 
 
 // Define the serial console for debug prints, if needed
@@ -136,12 +136,20 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
 
   // If a message is received on the topic esp32/output, you check if the message is either "on" or "off". 
   // Changes the output state according to the message
-  if (String(topic) == "867372058971479/kilit") {
+  if (String(topic) == "867372058971479/lock") {
     Serial.print("Changing output to ");
     if(messageTemp == "on"){
       Serial.println("on");
       lock_data="açık";
-      
+      for(int i=0; i<6 ; i++){
+        Serial.println("on");
+        Serial.println("on");
+        Serial.println("on");
+        Serial.println("on");
+        digitalWrite(15, HIGH);
+        digitalWrite(15, LOW);
+        
+        }
  
 
     }
@@ -280,13 +288,13 @@ void loop() {
     
     // Reconnect every 10 seconds
     uint32_t t = millis();
-    if (t - lastReconnectAttempt > 10000L) {
+    if (t - lastReconnectAttempt > 1000) {
       lastReconnectAttempt = t;
       if (mqttConnect()) {
         lastReconnectAttempt = 0;
       }
     }
-    delay(100);
+  
     return;
   }
 
@@ -335,7 +343,7 @@ void loop() {
   }
  
   long now = millis();
-  if (now - lastMsg > 5000) {
+  if (now - lastMsg > 2000) {
     lastMsg = now;
  
   
