@@ -112,7 +112,6 @@ void mqttCallback(char * topic, byte * message, unsigned int length) {
     if (String(topic) == "867372058971479/lock") {
         if (messageTemp == "on") {
 
-            lock_data = "açık";
             unsigned long eskiZaman = 0;
             unsigned long yeniZaman;
             yeniZaman = millis();
@@ -163,6 +162,8 @@ void setup() {
     //kilit pini
     pinMode(32, OUTPUT);
     digitalWrite(32, HIGH);
+    //kilit switch
+    pinMode(15, INPUT);
 
     modem.restart();
 
@@ -289,7 +290,13 @@ void loop() {
         total = 0;
         //pil konfigurasyonları yapılması
         yuzde = map(average, 31.1, 42.1, 0.0, 100.0);
-
+        //kilidin durumunu kontrol eder
+    if (digitalRead(15) == 1){
+            lock_data = "kapali";
+          }
+    else{
+            lock_data = "acik";
+          }
         StaticJsonDocument < 512 > JSONbuffer;
         JsonObject GpsVerileri = JSONbuffer.createNestedObject();
         JsonObject BatteryData = JSONbuffer.createNestedObject();
