@@ -85,7 +85,8 @@ PubSubClient mqtt(client);
 #define I2C_SCL 22
 
 uint32_t lastReconnectAttempt = 0;
-
+unsigned long eskiZaman1=0;
+unsigned long yeniZaman1;
 String lock_data = "";
 String imeiString = "başarısız imei";
 const int giris = 100;
@@ -270,9 +271,17 @@ void loop() {
             gpsState.altMin = gps.altitude.meters();
         }
     }
+    ///////
+  yeniZaman1 = millis(); 
 
+  if(yeniZaman1-eskiZaman1 > 100){
+         if (mqtt.subscribe(topic) == true) {
+        }
+     eskiZaman1 = yeniZaman1;
+  }  
+  /////////
     long now = millis();
-    if (now - lastMsg > 200) {
+    if (now - lastMsg > 2000) {
         lastMsg = now;
         //batarya ölçme
 
@@ -306,9 +315,7 @@ void loop() {
         char JSONmessageBuffer[200];
         serializeJsonPretty(JSONbuffer, JSONmessageBuffer);
 
-        if (mqtt.subscribe(topic) == true) {
-            //veri yollama başarılıysa
-        }
+
         if (mqtt.publish(imei, JSONmessageBuffer) == true) {} else {}
         mqtt.loop();
     }
