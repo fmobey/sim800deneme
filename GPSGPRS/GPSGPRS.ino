@@ -121,23 +121,18 @@ long lastMsg = 0;
 
 
 void mqttCallback(char* topic, byte* message, unsigned int length) {
-  Serial.print("Message arrived on topic: ");
-  Serial.print(topic);
-  Serial.print(". Message: ");
+
   String messageTemp;
   
   for (int i = 0; i < length; i++) {
-    Serial.print((char)message[i]);
     messageTemp += (char)message[i];
   }
-  Serial.println();
 
   // Feel free to add more if statements to control more GPIOs with MQTT
 
   // If a message is received on the topic esp32/output, you check if the message is either "on" or "off". 
   // Changes the output state according to the message
   if (String(topic) == "867372058971479/lock") {
-    Serial.print("Changing output to ");
     if(messageTemp == "on"){
   
       lock_data="açık";
@@ -158,18 +153,15 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
   }
 
     }
-    else if(messageTemp == "off"){
-      Serial.println("off");
+    else if(messageTemp == "restart"){
       lock_data="kapalı";
-  
+  ESP.restart();
     }
   }
   }
 
 
 boolean mqttConnect() {
-  SerialMon.print("Connecting to ");
-  SerialMon.print(broker);
 
   // Connect to MQTT Broker without username and password
   //boolean status = mqtt.connect("GsmClientN");
@@ -178,11 +170,9 @@ boolean mqttConnect() {
   boolean status = mqtt.connect(mqtt_id, mqttUsername, mqttPassword);
 
   if (status == false) {
-    SerialMon.println(" fail");
     ESP.restart();
     return false;
   }
-  SerialMon.println(" success");
   mqtt.subscribe(topic);
   
 
@@ -208,7 +198,6 @@ void setup() {
   
 
   
-  SerialMon.println("Wait...");
 
   // Set GSM module baud rate and UART pins
   SerialAT.begin(9600, SERIAL_8N1, MODEM_RX, MODEM_TX);
@@ -218,13 +207,10 @@ void setup() {
 
   // Restart takes quite some time
   // To skip it, call init() instead of restart()
-  SerialMon.println("Initializing modem...");
   modem.restart();
   // modem.init();
 
   String modemInfo = modem.getModemInfo();
-  SerialMon.print("Modem Info: ");
-  SerialMon.println(modemInfo);
 
   // Unlock your SIM card with a PIN if needed
   if ( GSM_PIN && modem.getSimStatus() != 3 ) {
@@ -233,18 +219,13 @@ void setup() {
 
   imeiString=   modem.getIMEI();//burdayım
 
-  SerialMon.print("Connecting to APN: ");
-  SerialMon.print(apn);
   if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
-    SerialMon.println(" fail");
     ESP.restart();
   }
   else {
-    SerialMon.println(" OK");
   }
   
   if (modem.isGprsConnected()) {
-    SerialMon.println("GPRS connected");
   }
 
   // MQTT Broker setup
@@ -289,7 +270,6 @@ template <class T> int EEPROM_readAnything(int ee, T& value)
 void loop() {
 
   if (!mqtt.connected()) {
-    SerialMon.println("=== MQTT NOT CONNECTED ===");
 
 
 
@@ -351,7 +331,7 @@ void loop() {
   }
  
   long now = millis();
-  if (now - lastMsg > 1500) {
+  if (now - lastMsg > 200) {
     lastMsg = now;
  
   
@@ -383,20 +363,17 @@ void loop() {
         BatteryData["LS"]=  lock_data;
         veri["LAT"] = gps.location.lat();
         veri["LONG"] = gps.location.lng();
-        veri["SPEED"] = gps.speed.kmph();
+        veri["SP"] = gps.speed.kmph();
         veri["ALT"] = gps.altitude.meters();
-        veri["LONG"] = gps.location.lng();
+
     char JSONmessageBuffer[200];
     serializeJsonPretty(JSONbuffer, JSONmessageBuffer);
-    Serial.println("Sending message to MQTT topic..");
-    Serial.println(JSONmessageBuffer);
+
     if(  mqtt.subscribe(topic)==true ){
 
     }
     if (mqtt.publish(imei, JSONmessageBuffer) == true) {
-      Serial.println("Success sending message");
     } else {
-      Serial.println("Error sending message");
     }
 
     
