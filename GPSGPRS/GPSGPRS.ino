@@ -50,7 +50,7 @@ const char * mqttUsername = "raccoon"; // MQTT username
 const char * mqttPassword = "Ze255Wer29tete/-"; // MQTT password
 const char * mqtt_id = "831ac06b-709f-480b-89d4-c6fe333a6b49"; // MQTT id
 const char * imei = "867372058971479"; //gps,battery gibi verilerin yollandıgı topic
-const char * topic = "867372058971479/lock"; //kilit,restart gibi verilerin okundugu yer
+const char * topic = "867372058971479/systemcontroller"; //kilit,restart gibi verilerin okundugu yer
 
 #include <Wire.h>
 
@@ -109,8 +109,8 @@ void mqttCallback(char * topic, byte * message, unsigned int length) {
         messageTemp += (char) message[i];
     }
     //kilit açma
-    if (String(topic) == "867372058971479/lock") {
-        if (messageTemp == "on") {
+    if (String(topic) == "867372058971479/systemcontroller") {
+        if (messageTemp == "lockopen") {
 
             unsigned long eskiZaman = 0;
             unsigned long yeniZaman;
@@ -127,7 +127,15 @@ void mqttCallback(char * topic, byte * message, unsigned int length) {
                 eskiZaman = yeniZaman;
             }
             //restart komutu
-        } else if (messageTemp == "restart") {
+        } else if (messageTemp == "scooteropen") {
+                       digitalWrite(33, LOW);
+
+        }
+        else if (messageTemp == "scooterclose") {
+                    digitalWrite(33, HIGH);
+
+        }
+        else if (messageTemp == "restart") {
             lock_data = "kapalı";
             ESP.restart();
         }
@@ -162,6 +170,8 @@ void setup() {
     //kilit pini
     pinMode(32, OUTPUT);
     digitalWrite(32, HIGH);
+    pinMode(33, OUTPUT);
+    digitalWrite(33, HIGH);
     //kilit switch
     pinMode(15, INPUT);
 
